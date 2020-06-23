@@ -11,6 +11,11 @@
 
   <body>
     <% if @current_user %>
+      Logged in as: <%= @current_user.email %>
+
+      <br />
+      <br />
+
       <%= button_to 'Logout', logout_path, method: :delete %>
     <% else %>
       <%= form_with(url: login_path, local: true) do |form| %>
