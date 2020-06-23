@@ -1,0 +1,32 @@
+<p id="notice"><%= notice %></p>
+
+<p><b>Location:</b> <%= @location.name %></p>
+<p><b>Projects:</b></p>
+<ul>
+  <% @location.projects.sort_by{|p| [p.organization.name, p.name]}.group_by(&:organization).each do |org, projects| %>
+    <li>
+      <%= link_to org.name, org %>
+      <ul>
+        <% projects.each do |p| %>
+          <li><%= link_to p.name, p %></li>
+        <% end %>
+      </ul>
+    </li>
+  <% end %>
+</ul>
+<p><b>Employees:</b></p>
+<ul>
+  <% @location.employees.sort_by{|e| [e.organization.name, e.email]}.group_by(&:organization).each do |org, employees| %>
+    <li>
+      <%= link_to org.name, org %>
+      <ul>
+        <% employees.each do |e| %>
+          <li><%= e.email %></li>
+        <% end %>
+      </ul>
+    </li>
+  <% end %>
+</ul>
+
+<%= link_to 'Edit', edit_location_path(@location) %> |
+<%= link_to 'Back', locations_path %>

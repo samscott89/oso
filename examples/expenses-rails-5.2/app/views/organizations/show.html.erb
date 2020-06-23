@@ -1,0 +1,32 @@
+<p id="notice"><%= notice %></p>
+
+<p><b>Organization name:</b> <%= @organization.name %></p>
+<p><b>Teams:</b></p>
+<ul>
+  <% @organization.teams.sort_by(&:name).each do |t| %>
+    <li>
+      <%= link_to t.name, t %>
+      <ul>
+        <% t.projects.sort_by(&:name).each do |p| %>
+          <li><%= link_to p.name, p %></li>
+        <% end %>
+      </ul>
+    </li>
+  <% end %>
+</ul>
+<p><b>Employees:</b></p>
+<ul>
+  <% @organization.employees.group_by(&:location).each do |location, employees| %>
+    <li>
+      <%= link_to location.name, location %>
+      <ul>
+        <% employees.sort_by(&:email).each do |e| %>
+          <li><%= e.email %> (<%= e.title %>)</li>
+        <% end %>
+      </ul>
+    </li>
+  <% end %>
+</ul>
+
+<%= link_to 'Edit', edit_organization_path(@organization) %> |
+<%= link_to 'Back', organizations_path %>

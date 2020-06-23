@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Expenses</title>
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= stylesheet_link_tag    'application', media: 'all', 'data-turbolinks-track': 'reload' %>
+    <%= javascript_include_tag 'application', 'data-turbolinks-track': 'reload' %>
+  </head>
+
+  <body>
+    <% if @current_user %>
+      <%= button_to 'Logout', logout_path, method: :delete %>
+    <% else %>
+      <%= form_with(url: login_path, local: true) do |form| %>
+        <b><%= label_tag :email %>:</b>
+        <%= form.text_field :email %>
+
+        <%= form.submit 'Login' %>
+      <% end %>
+    <% end %>
+
+    <%= yield %>
+  </body>
+</html>

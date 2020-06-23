@@ -1,0 +1,19 @@
+<p id="notice"><%= notice %></p>
+
+<p><b>Team name:</b> <%= @team.name %></p>
+<p><b>Organization:</b> <%= link_to @team.organization.name, @team.organization %></p>
+<p><b>Projects:</b></p>
+<ul>
+  <% @team.projects.sort_by(&:name).each do |p| %>
+    <li><%= link_to p.name, p %></li>
+  <% end %>
+</ul>
+<p><b>Employees:</b></p>
+<ul>
+  <% @team.members.sort_by(&:email).each do |m| %>
+    <li><%= m.email %></li>
+  <% end %>
+</ul>
+
+<%= link_to 'Edit', edit_team_path(@team) %> |
+<%= link_to 'Back', teams_path %>

@@ -1,0 +1,30 @@
+<p id="notice"><%= notice %></p>
+
+<h1>Projects</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Location</th>
+      <th>Team</th>
+      <th>Project</th>
+      <th colspan="2"></th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <% @projects.sort_by{|p| [p.location.name, p.team.name, p.name]}.each do |project| %>
+      <tr>
+        <td><%= link_to project.location.name, project.location %></td>
+        <td><%= link_to project.team.name, project.team %></td>
+        <td><%= link_to project.name, project %></td>
+        <td><%= link_to 'Edit', edit_project_path(project) %></td>
+        <td><%= link_to 'Destroy', project, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<br>
+
+<%= link_to 'New Project', new_project_path %>

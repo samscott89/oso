@@ -1,0 +1,9 @@
+<p id="notice"><%= notice %></p>
+
+<p><b>Project:</b> <%= link_to @expense.project.name, @expense.project %></p>
+<p><b>Description:</b> <%= @expense.description %></p>
+<p><b>Employee:</b> <%= @expense.employee.email %></p>
+<p><b>Amount:</b> <%= number_to_currency (@expense.amount.to_f / 100) %></p>
+
+<%= link_to 'Edit', edit_expense_path(@expense) %> |
+<%= link_to 'Back', expenses_path %>
