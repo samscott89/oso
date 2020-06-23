@@ -1,16 +1,17 @@
+# frozen_string_literal: true
+
 class ExpensesController < ApplicationController
-  before_action :set_expense, only: [:show, :edit, :update, :destroy]
+  before_action :set_expense, only: %i[show edit update destroy]
 
   # GET /expenses
   # GET /expenses.json
   def index
-    @expenses = Expense.all
+    @expenses = Expense.includes(:employee, :project).select { |e| allowed(e) }
   end
 
   # GET /expenses/1
   # GET /expenses/1.json
-  def show
-  end
+  def show; end
 
   # GET /expenses/new
   def new
@@ -18,8 +19,7 @@ class ExpensesController < ApplicationController
   end
 
   # GET /expenses/1/edit
-  def edit
-  end
+  def edit; end
 
   # POST /expenses
   # POST /expenses.json
@@ -62,13 +62,15 @@ class ExpensesController < ApplicationController
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_expense
-      @expense = Expense.find(params[:id])
-    end
 
-    # Only allow a list of trusted parameters through.
-    def expense_params
-      params.fetch(:expense, {})
-    end
+  # Use callbacks to share common setup or constraints between actions.
+  def set_expense
+    @expense = Expense.find_by(id: params[:id])
+    redirect_back fallback_location: expenses_path unless allowed(@expense)
+  end
+
+  # Only allow a list of trusted parameters through.
+  def expense_params
+    params.fetch(:expense, {})
+  end
 end
