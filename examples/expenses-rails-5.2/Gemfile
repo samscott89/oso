@@ -65,5 +65,5 @@ group :development do
   gem 'faker', '~> 2.12'
   gem 'solargraph', '~> 0.39.8'
 
-  gem 'oso-oso', path: File.expand_path(File.join(__dir__, '../../languages/ruby'))
+  gem 'oso-oso', '~> 0.3.0'
 end
