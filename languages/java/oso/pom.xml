@@ -4,15 +4,15 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.osohq.oso</groupId>
+  <groupId>com.osohq</groupId>
   <artifactId>oso</artifactId>
   <version>0.3.0</version>
   
   <distributionManagement>
-    <repository>
-      <id>github</id>
-      <name>Github osohq Apache Maven Packages</name>
-      <url>https://maven.pkg.github.com/osohq/oso</url>
+     <repository>
+      <id>ossrh</id>
+      <name>Central Repository OSSRH</name>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
     </repository>
   </distributionManagement>
 
