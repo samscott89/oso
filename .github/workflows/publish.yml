@@ -29,11 +29,6 @@ jobs:
           server-id: ossrh
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
-      - name: Publish to the Maven Central Repository
-        run: mvn -B deploy
-        env:
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
       - name: Copy libraries into resources.
         run: |
           mkdir -p languages/java/oso/src/main/resources/linux
@@ -44,6 +39,9 @@ jobs:
           cp -r oso-lib-${{ github.event.inputs.version }}/polar.dll languages/java/oso/src/main/resources/win/
       - run: |
           mvn clean source:jar deploy -DuniqueVersion=false -Dmaven.source.useDefaultManifestFile=true -DdeplyAtEnd=true -Dmaven.source.includePom=true -Dmaven.install.skip=true
+        env:
+          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
         working-directory: languages/java/oso
   # python:
   #   name: Publish python package to pypi
