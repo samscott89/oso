@@ -20,10 +20,13 @@ import {
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
+import { Polar } from './polar_analyzer';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 const connection = createConnection(ProposedFeatures.all);
+
+const polar = new Polar();
 
 // Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
@@ -105,7 +108,7 @@ connection.onDidChangeConfiguration(change => {
 	}
 
 	// Revalidate all open text documents
-	// documents.all().forEach(validateTextDocument);
+	documents.all().forEach(d => validateContents(d.getText(), d.uri));
 });
 
 function getDocumentSettings(resource: string): Thenable<Settings> {
@@ -132,8 +135,12 @@ documents.onDidClose(e => {
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
 	console.log("Document change: ", change)
-	// validateTextDocument(change.document);
+	validateContents(change.document.getText(), change.document.uri);
 });
+
+async function validateContents(policy: string, file: string): Promise<void> {
+	polar.load(policy, file)
+}
 
 // async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 // 	// In this simple example we get the settings for every validate run.

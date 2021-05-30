@@ -771,6 +771,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "polar-analyzer"
+version = "0.0.1"
+dependencies = [
+ "console_error_panic_hook",
+ "js-sys",
+ "polar-core",
+ "serde",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+]
+
+[[package]]
 name = "polar-c-api"
 version = "0.12.3"
 dependencies = [
@@ -1552,6 +1564,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3cd364751395ca0f68cafb17666eee36b63077fb5ecd972bbcd74c90c4bf736e"
 dependencies = [
  "cfg-if 1.0.0",
+ "serde",
+ "serde_json",
  "wasm-bindgen-macro",
 ]
 

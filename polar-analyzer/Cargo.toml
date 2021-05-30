@@ -1,0 +1,22 @@
+[package]
+name = "polar-analyzer"
+version = "0.0.1"
+authors = ["Oso Security, Inc. <support@osohq.com>"]
+edition = "2018"
+
+[lib]
+bench = false
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+console_error_panic_hook = "0.1.6"
+js-sys = "0.3.46"
+polar-core = { path = "../polar-core", version = "0.12.3" }
+serde = { version = "1.0.119", features = ["derive", "rc"] }
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.19"
+
+[features]
+default = []
