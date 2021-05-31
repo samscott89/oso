@@ -11,8 +11,8 @@ nodejs web: clean
 	wasm-pack -q build $(CARGO_FLAGS) --target $@ -d pkg
 	@rm pkg/.gitignore pkg/package.json
 	@cp pkg/* ../vscode/oso-lsp/server/src/
-	@mkdir -p ../vscode/oso-lsp/server/dist/src
-	@cp pkg/* ../vscode/oso-lsp/server/dist/src/
+	@mkdir -p ../vscode/oso-lsp/server/dist
+	@cp pkg/* ../vscode/oso-lsp/server/dist/
 
 bundler: clean
 	wasm-pack -q build $(CARGO_FLAGS) --target $@ -d pkg

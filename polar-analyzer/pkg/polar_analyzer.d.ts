@@ -9,10 +9,15 @@ export class Polar {
   constructor();
 /**
 * @param {string} src
-* @param {string | undefined} filename
+* @param {string} filename
+* @returns {any}
 */
-  load(src: string, filename?: string): void;
+  load(src: string, filename: string): any;
 /**
 */
   clearRules(): void;
+/**
+* @returns {any}
+*/
+  getSummary(): any;
 }

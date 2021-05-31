@@ -94,6 +94,30 @@ pub fn parse_query(src_id: u64, src: &str) -> PolarResult<Term> {
         })
 }
 
+pub fn parse_file_with_errors(
+    src_id: u64,
+    src: &str,
+) -> PolarResult<(Vec<Line>, Vec<(String, usize, usize)>)> {
+    let mut errors = vec![];
+    polar::LinesParser::new()
+        .parse(src_id, &mut errors, Lexer::new(src))
+        .map_err(|e| to_parse_error(e).into())
+        .map(|t| {
+            (
+                t,
+                errors
+                    .into_iter()
+                    .flat_map(|e| {
+                        let err_string = to_parse_error(e.error).to_string();
+                        e.dropped_tokens
+                            .into_iter()
+                            .map(move |(l, _, r)| (err_string.clone(), l, r))
+                    })
+                    .collect(),
+            )
+        })
+}
+
 pub fn parse_query_with_errors(src_id: u64, src: &str) -> PolarResult<(Term, String)> {
     let mut errors = vec![];
     polar::TermParser::new()

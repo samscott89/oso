@@ -36,8 +36,10 @@ pub struct Source {
 }
 
 pub struct Sources {
-    /// Map from term ID to `Source`.
-    sources: HashMap<u64, Source>,
+    /// Map from source ID to `Source`.
+    pub sources: HashMap<u64, Source>,
+    /// Map from filename to source ID
+    pub files: HashMap<String, u64>,
 }
 
 impl Default for Sources {
@@ -50,12 +52,18 @@ impl Default for Sources {
                 src: "<Unknown>".to_string(),
             },
         );
-        Self { sources }
+        Self {
+            sources,
+            files: Default::default(),
+        }
     }
 }
 
 impl Sources {
     pub fn add_source(&mut self, source: Source, id: u64) {
+        if let Some(ref f) = source.filename {
+            self.files.insert(f.clone(), id);
+        }
         self.sources.insert(id, source);
     }
 

@@ -241,6 +241,48 @@ impl Polar {
         self.load(src, None)
     }
 
+    pub fn remove_file(&self, filename: &str) {
+        let kb = self.kb.read().unwrap();
+        let src_id = *kb.sources.files.get(filename).expect("cannot find file");
+        assert_eq!(
+            kb.sources.get_source(src_id).unwrap().filename.unwrap(),
+            filename
+        );
+        drop(kb);
+        self.remove_source(src_id);
+        assert!(self.loaded_files.write().unwrap().get(filename).is_none());
+    }
+
+    pub fn remove_source(&self, source_id: u64) {
+        let mut kb = self.kb.write().unwrap();
+
+        kb.rules.retain(|_, gr| {
+            let to_remove: Vec<u64> = gr.rules.iter().filter_map(|(idx, rule)| {
+                if matches!(rule.source_info, SourceInfo::Parser { src_id, ..} if src_id == source_id) {
+                    Some(*idx)
+                } else {
+                    None
+                }
+            }).collect();
+
+            for idx in to_remove {
+                gr.remove_rule(idx);
+            }
+            !gr.rules.is_empty()
+        });
+
+        let source = kb.sources.sources.remove(&source_id).unwrap();
+        kb.inline_queries
+            .retain(|q| q.get_source_id() != Some(source_id));
+        let filename = source.filename.unwrap();
+        kb.sources.files.remove(&filename);
+        self.loaded_files.write().unwrap().remove(&filename);
+        self.loaded_content
+            .write()
+            .unwrap()
+            .retain(|_, f| f != &filename);
+    }
+
     /// Clear rules from the knowledge base
     pub fn clear_rules(&self) {
         let mut kb = self.kb.write().unwrap();

@@ -14,7 +14,8 @@ import {
 	CompletionItemKind,
 	TextDocumentPositionParams,
 	TextDocumentSyncKind,
-	InitializeResult
+	InitializeResult,
+	integer
 } from 'vscode-languageserver/node';
 
 import {
@@ -108,7 +109,7 @@ connection.onDidChangeConfiguration(change => {
 	}
 
 	// Revalidate all open text documents
-	documents.all().forEach(d => validateContents(d.getText(), d.uri));
+	documents.all().forEach(validateContents);
 });
 
 function getDocumentSettings(resource: string): Thenable<Settings> {
@@ -135,11 +136,52 @@ documents.onDidClose(e => {
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
 	console.log("Document change: ", change)
-	validateContents(change.document.getText(), change.document.uri);
+	validateContents(change.document);
 });
 
-async function validateContents(policy: string, file: string): Promise<void> {
-	polar.load(policy, file)
+async function validateContents(textDocument: TextDocument): Promise<void> {
+	const policy = textDocument.getText();
+	const filename = textDocument.uri;
+	const diagnostics: Diagnostic[] = [];
+	try {
+		const { errors, unused_rules } = polar.load(policy, filename);
+		errors.forEach(([message, left, right]: [string, integer, integer]) => {
+			const diagnostic: Diagnostic = {
+				severity: DiagnosticSeverity.Error,
+				message: message,
+				range: {
+					start: textDocument.positionAt(left),
+					end: textDocument.positionAt(right)
+				},
+				source: 'polar'
+			};
+			diagnostics.push(diagnostic);
+		});
+		unused_rules.forEach(([ruleName, left, right]: [string, integer, integer]) => {
+			const diagnostic: Diagnostic = {
+				severity: DiagnosticSeverity.Warning,
+				message: `Rule does not exist: ${ruleName}`,
+				range: {
+					start: textDocument.positionAt(left),
+					end: textDocument.positionAt(right)
+				},
+				source: 'polar'
+			};
+			diagnostics.push(diagnostic);
+		});
+	} catch (error) {
+		const diagnostic: Diagnostic = {
+			severity: DiagnosticSeverity.Error,
+			message: error,
+			range: {
+				start: textDocument.positionAt(-1),
+				end: textDocument.positionAt(-1)
+			},
+			source: 'polar'
+		};
+		diagnostics.push(diagnostic);
+	}
+	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
 }
 
 // async function validateTextDocument(textDocument: TextDocument): Promise<void> {
@@ -155,15 +197,6 @@ async function validateContents(policy: string, file: string): Promise<void> {
 // 	const diagnostics: Diagnostic[] = [];
 // 	while ((m = pattern.exec(text)) && problems < settings.maxNumberOfProblems) {
 // 		problems++;
-// 		const diagnostic: Diagnostic = {
-// 			severity: DiagnosticSeverity.Warning,
-// 			range: {
-// 				start: textDocument.positionAt(m.index),
-// 				end: textDocument.positionAt(m.index + m[0].length)
-// 			},
-// 			message: `${m[0]} is all uppercase.`,
-// 			source: 'ex'
-// 		};
 // 		if (hasDiagnosticRelatedInformationCapability) {
 // 			diagnostic.relatedInformation = [
 // 				{
@@ -201,16 +234,16 @@ connection.onCompletion(
 		// which code complete got requested. For the example we ignore this
 		// info and always provide the same completion items.
 		return [
-			{
-				label: 'TypeScript',
-				kind: CompletionItemKind.Text,
-				data: 1
-			},
-			{
-				label: 'JavaScript',
-				kind: CompletionItemKind.Text,
-				data: 2
-			}
+			// {
+			// 	label: 'TypeScript',
+			// 	kind: CompletionItemKind.Text,
+			// 	data: 1
+			// },
+			// {
+			// 	label: 'JavaScript',
+			// 	kind: CompletionItemKind.Text,
+			// 	data: 2
+			// }
 		];
 	}
 );
