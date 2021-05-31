@@ -11,7 +11,6 @@ use super::terms::*;
 use super::vm::*;
 use super::warnings::check_singletons;
 
-use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
 pub struct Query {
@@ -129,10 +128,6 @@ impl Iterator for Query {
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
     messages: MessageQueue,
-    /// Set of filenames already loaded
-    loaded_files: Arc<RwLock<HashSet<String>>>,
-    /// Map from source code loaded to the filename it was loaded as
-    loaded_content: Arc<RwLock<HashMap<String, String>>>,
 }
 
 impl Default for Polar {
@@ -146,68 +141,19 @@ impl Polar {
         Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
             messages: MessageQueue::new(),
-            loaded_content: Arc::new(RwLock::new(HashMap::new())), // file content -> file name
-            loaded_files: Arc::new(RwLock::new(HashSet::new())),   // set of file names
         }
-    }
-
-    fn check_file(&self, src: &str, filename: &str) -> PolarResult<()> {
-        match (
-            self.loaded_content.read().unwrap().get(src),
-            self.loaded_files.read().unwrap().contains(filename),
-        ) {
-            (Some(other_file), true) if other_file == filename => {
-                return Err(error::RuntimeError::FileLoading {
-                    msg: format!("File {} has already been loaded.", filename),
-                }
-                .into())
-            }
-            (_, true) => {
-                return Err(error::RuntimeError::FileLoading {
-                    msg: format!(
-                        "A file with the name {}, but different contents has already been loaded.",
-                        filename
-                    ),
-                }
-                .into());
-            }
-            (Some(other_file), _) => {
-                return Err(error::RuntimeError::FileLoading {
-                    msg: format!(
-                        "A file with the same contents as {} named {} has already been loaded.",
-                        filename, other_file
-                    ),
-                }
-                .into());
-            }
-            _ => {}
-        }
-        self.loaded_content
-            .write()
-            .unwrap()
-            .insert(src.to_string(), filename.to_string());
-        self.loaded_files
-            .write()
-            .unwrap()
-            .insert(filename.to_string());
-
-        Ok(())
     }
 
     pub fn load(&self, src: &str, filename: Option<String>) -> PolarResult<()> {
-        if let Some(ref filename) = filename {
-            self.check_file(src, filename)?;
-        }
         let source = Source {
             filename,
             src: src.to_owned(),
         };
         let mut kb = self.kb.write().unwrap();
-        let src_id = kb.new_id();
+        let source_id = kb.add_source(source.clone())?;
         let mut lines =
-            parser::parse_lines(src_id, src).map_err(|e| e.set_context(Some(&source), None))?;
+            parser::parse_lines(source_id, src).map_err(|e| e.set_context(Some(&source), None))?;
         lines.reverse();
-        kb.sources.add_source(source, src_id);
         let mut warnings = vec![];
         while let Some(line) = lines.pop() {
             match line {
@@ -242,55 +188,14 @@ impl Polar {
     }
 
     pub fn remove_file(&self, filename: &str) {
-        let kb = self.kb.read().unwrap();
-        let src_id = *kb.sources.files.get(filename).expect("cannot find file");
-        assert_eq!(
-            kb.sources.get_source(src_id).unwrap().filename.unwrap(),
-            filename
-        );
-        drop(kb);
-        self.remove_source(src_id);
-        assert!(self.loaded_files.write().unwrap().get(filename).is_none());
-    }
-
-    pub fn remove_source(&self, source_id: u64) {
         let mut kb = self.kb.write().unwrap();
-
-        kb.rules.retain(|_, gr| {
-            let to_remove: Vec<u64> = gr.rules.iter().filter_map(|(idx, rule)| {
-                if matches!(rule.source_info, SourceInfo::Parser { src_id, ..} if src_id == source_id) {
-                    Some(*idx)
-                } else {
-                    None
-                }
-            }).collect();
-
-            for idx in to_remove {
-                gr.remove_rule(idx);
-            }
-            !gr.rules.is_empty()
-        });
-
-        let source = kb.sources.sources.remove(&source_id).unwrap();
-        kb.inline_queries
-            .retain(|q| q.get_source_id() != Some(source_id));
-        let filename = source.filename.unwrap();
-        kb.sources.files.remove(&filename);
-        self.loaded_files.write().unwrap().remove(&filename);
-        self.loaded_content
-            .write()
-            .unwrap()
-            .retain(|_, f| f != &filename);
+        kb.remove_file(filename);
     }
 
     /// Clear rules from the knowledge base
     pub fn clear_rules(&self) {
         let mut kb = self.kb.write().unwrap();
-        kb.rules.clear();
-        kb.sources = Sources::default();
-        kb.inline_queries.clear();
-        self.loaded_content.write().unwrap().clear();
-        self.loaded_files.write().unwrap().clear();
+        kb.clear_sources();
     }
 
     pub fn next_inline_query(&self, trace: bool) -> Option<Query> {
