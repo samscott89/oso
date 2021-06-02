@@ -289,6 +289,10 @@ module.exports.__wbg_set_327f76e14f96ef0e = function() { return logError(functio
     getObject(arg0)[takeObject(arg1)] = takeObject(arg2);
 }, arguments) };
 
+module.exports.__wbindgen_object_drop_ref = function(arg0) {
+    takeObject(arg0);
+};
+
 module.exports.__wbg_error_4bb6c2a97407129a = function() { return logError(function (arg0, arg1) {
     try {
         console.error(getStringFromWasm0(arg0, arg1));
@@ -309,10 +313,6 @@ module.exports.__wbg_stack_558ba5917b466edd = function() { return logError(funct
     getInt32Memory0()[arg0 / 4 + 1] = len0;
     getInt32Memory0()[arg0 / 4 + 0] = ptr0;
 }, arguments) };
-
-module.exports.__wbindgen_object_drop_ref = function(arg0) {
-    takeObject(arg0);
-};
 
 module.exports.__wbg_new_515b65a8e7699d00 = function() { return logError(function () {
     var ret = new Array();
