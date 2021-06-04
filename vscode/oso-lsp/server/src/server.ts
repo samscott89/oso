@@ -15,13 +15,21 @@ import {
 	TextDocumentPositionParams,
 	TextDocumentSyncKind,
 	InitializeResult,
-	integer
+	integer,
+	DocumentSymbolParams,
+	SymbolKind,
+	SymbolInformation,
+	Position,
+	Range
+
 } from 'vscode-languageserver/node';
 
 import {
+	DocumentUri,
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 import { Polar } from './polar_analyzer';
+import { create } from 'domain';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -59,7 +67,8 @@ connection.onInitialize((params: InitializeParams) => {
 			// Tell the client that this server supports code completion.
 			completionProvider: {
 				resolveProvider: true
-			}
+			},
+			documentSymbolProvider: true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -226,6 +235,52 @@ async function validateContents(textDocument: TextDocument): Promise<void> {
 // 	// Monitored files have change in VSCode
 // 	connection.console.log('We received an file change event');
 // });
+
+connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation [] => {
+	connection.console.log('We received a document symbol event');
+	const doc = documents.get(params.textDocument.uri);
+	console.log(`doc is ${doc}`);
+	const result: SymbolInformation [] = [];
+	
+	if (doc !== undefined) {
+		const summary: {rules: {symbol: string, 
+			signature: string, 
+			location: [string, number, number]}[] } = polar.getSummary();
+
+		console.log('Polar summary is', summary);
+
+		summary.rules.forEach((rule: {symbol: string, 
+									  signature: string, 
+									  location: [string, number, number]}) => {
+			
+			const docUri: DocumentUri = rule.location[0];
+
+			const symbolRangeStart: Position = {
+				line: rule.location[1],
+				character: rule.location[2]
+			}
+
+			const symbolRangeEnd: Position = {
+				line: rule.location[1],
+				character: rule.location[2] + rule.symbol.length
+			}
+
+			const symbolSummary: SymbolInformation = {
+				name: rule.symbol,
+				kind: SymbolKind.Method,
+				location: {
+					uri: docUri,
+					range: Range.create(symbolRangeStart, symbolRangeEnd)
+				}
+
+			}
+			result.push(symbolSummary);
+		}) 
+	}
+   // TODO
+   console.log("The obtained symbol information is", result);
+   return result;
+});
 
 // This handler provides the initial list of the completion items.
 connection.onCompletion(
