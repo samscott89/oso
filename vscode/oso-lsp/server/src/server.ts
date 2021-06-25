@@ -237,15 +237,20 @@ async function validateContents(textDocument: TextDocument): Promise<void> {
 // });
 
 connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation [] => {
+
 	connection.console.log('We received a document symbol event');
 	const doc = documents.get(params.textDocument.uri);
 	console.log(`doc is ${doc}`);
 	const result: SymbolInformation [] = [];
 	
 	if (doc !== undefined) {
-		const summary: {rules: {symbol: string, 
-			signature: string, 
-			location: [string, number, number]}[] } = polar.getSummary();
+		const summary: {
+						rules: {
+								symbol: string, 
+								signature: string, 
+								location: [string, number, number]
+							   }[] 
+					   } = polar.getSummary();
 
 		console.log('Polar summary is', summary);
 
@@ -253,32 +258,30 @@ connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation []
 									  signature: string, 
 									  location: [string, number, number]}) => {
 			
-			const docUri: DocumentUri = rule.location[0];
+			const currentDocUri: DocumentUri = rule.location[0];
 
-			const symbolRangeStart: Position = {
-				line: rule.location[1],
-				character: rule.location[2]
+			if (currentDocUri === params.textDocument.uri) {
+
+				const symbolSummary: SymbolInformation = {
+					name: rule.symbol,
+					kind: SymbolKind.Method,
+					location: {
+						uri: currentDocUri,
+						range: {
+							start: doc.positionAt(rule.location[1] + 1),
+							end: doc.positionAt(rule.location[2])
+						}
+						//Range.create(symbolRangeStart, symbolRangeEnd)
+					}
+				};
+				result.push(symbolSummary);
 			}
-
-			const symbolRangeEnd: Position = {
-				line: rule.location[1],
-				character: rule.location[2] + rule.symbol.length
-			}
-
-			const symbolSummary: SymbolInformation = {
-				name: rule.symbol,
-				kind: SymbolKind.Method,
-				location: {
-					uri: docUri,
-					range: Range.create(symbolRangeStart, symbolRangeEnd)
-				}
-
-			}
-			result.push(symbolSummary);
-		}) 
+			
+		}); 
 	}
    // TODO
    console.log("The obtained symbol information is", result);
+   // result.sort((rule1, rule2) => (rule2.location.range.start.line - rule1.location.range.start.line));
    return result;
 });
 

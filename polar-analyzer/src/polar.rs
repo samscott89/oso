@@ -7,9 +7,11 @@ use polar_core::{
     rules::Rule,
     sources::{self, SourceInfo},
     visitor::Visitor,
+    terms::Symbol
 };
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
+use std::collections::{HashSet};
 
 use crate::JsResult;
 
@@ -72,6 +74,7 @@ impl Polar {
             kb: &'kb KnowledgeBase,
         }
 
+        
         impl<'kb> Visitor for UnusedRuleVisitor<'kb> {
             fn visit_term(&mut self, t: &polar_core::terms::Term) {
                 match t.value() {
@@ -169,6 +172,7 @@ Found:
         // Get a read lock on the KB
         let kb = self.0.kb.read().expect("failed to get lock on KB");
 
+        
         let get_rule_signature = |r: &Rule| {
             if let sources::SourceInfo::Parser {
                 src_id,
@@ -207,6 +211,12 @@ Found:
             (None, 0, 0)
         };
 
+        let get_term_value = |r: &Rule| {
+            let mut variable_set: HashSet<Symbol> = HashSet::new();
+            r.body.variables(&mut variable_set);
+            variable_set
+        };
+
         serde_wasm_bindgen::to_value(&PolicySummary {
             rules: kb
                 .rules
@@ -215,6 +225,7 @@ Found:
                     generic_rule.rules.iter().map(move |(_, r)| RuleInfo {
                         symbol: name.0.clone(),
                         signature: get_rule_signature(r),
+                        body: get_term_value(r),
                         location: get_rule_location(r),
                     })
                 })
@@ -228,10 +239,20 @@ Found:
 pub struct PolicySummary {
     rules: Vec<RuleInfo>,
 }
+/*
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RuleBody {
+    //term: Arc<Value>,
+    symbol: String,
+    signature: String,
+    location: (Option<String>, usize, usize),
+    term: Term
+} */
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RuleInfo {
     symbol: String,
     signature: String,
+    body: HashSet<Symbol>,
     location: (Option<String>, usize, usize),
 }
