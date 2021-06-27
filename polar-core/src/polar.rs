@@ -187,9 +187,9 @@ impl Polar {
         self.load(src, None)
     }
 
-    pub fn remove_file(&self, filename: &str) {
+    pub fn remove_file(&self, filename: &str) -> Option<String> {
         let mut kb = self.kb.write().unwrap();
-        kb.remove_file(filename);
+        kb.remove_file(filename)
     }
 
     /// Clear rules from the knowledge base

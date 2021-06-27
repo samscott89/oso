@@ -141,19 +141,37 @@ documents.onDidClose(e => {
 	documentSettings.delete(e.document.uri);
 });
 
-// The content of a text document has changed. This event is emitted
-// when the text document first opened or when its content has changed.
-documents.onDidChangeContent(change => {
-	console.log("Document change: ", change)
-	validateContents(change.document);
-});
-
-async function validateContents(textDocument: TextDocument): Promise<void> {
+// Attempt to load the policy file into the Polar knowledge base
+// Any errors will be returned to the client.
+//
+// returns `false` if loading fails. In which case the knowledge
+// base will be left unchanged
+function tryLoadFile(textDocument: TextDocument): boolean {
 	const policy = textDocument.getText();
-	const filename = textDocument.uri;
+	const errors = polar.getParseErrors(policy);
 	const diagnostics: Diagnostic[] = [];
-	try {
-		const { errors, unused_rules } = polar.load(policy, filename);
+	var success = false;
+	if (errors.length === 0) {
+		// no parse errors! Lets try loading the policy for real
+		const filename = textDocument.uri;
+		try {
+			polar.load(policy, filename);
+			success = true;
+		} catch (error) {
+			const diagnostic: Diagnostic = {
+				severity: DiagnosticSeverity.Error,
+				message: error,
+				range: {
+					start: textDocument.positionAt(-1),
+					end: textDocument.positionAt(-1)
+				},
+				source: 'polar'
+			};
+			diagnostics.push(diagnostic);
+		}
+	} else {
+		// parse errors :( 
+		// send them back to the client
 		errors.forEach(([message, left, right]: [string, integer, integer]) => {
 			const diagnostic: Diagnostic = {
 				severity: DiagnosticSeverity.Error,
@@ -166,123 +184,85 @@ async function validateContents(textDocument: TextDocument): Promise<void> {
 			};
 			diagnostics.push(diagnostic);
 		});
-		unused_rules.forEach(([ruleName, left, right]: [string, integer, integer]) => {
-			const diagnostic: Diagnostic = {
-				severity: DiagnosticSeverity.Warning,
-				message: `Rule does not exist: ${ruleName}`,
-				range: {
-					start: textDocument.positionAt(left),
-					end: textDocument.positionAt(right)
-				},
-				source: 'polar'
-			};
-			diagnostics.push(diagnostic);
-		});
-	} catch (error) {
+
+	}
+	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
+	return success
+}
+
+// The content of a text document has changed. This event is emitted
+// when the text document first opened or when its content has changed.
+documents.onDidChangeContent(change => {
+	console.log("Document change: ", change)
+	const doc = change.document
+	if (tryLoadFile(doc)) {
+		validateContents(doc);
+	}
+});
+
+async function validateContents(textDocument: TextDocument): Promise<void> {
+	const diagnostics: Diagnostic[] = [];
+	const policy = textDocument.getText()
+	const unused_rules = polar.getUnusedRules(policy);
+	unused_rules.forEach(([ruleName, left, right]: [string, integer, integer]) => {
 		const diagnostic: Diagnostic = {
-			severity: DiagnosticSeverity.Error,
-			message: error,
+			severity: DiagnosticSeverity.Warning,
+			message: `Rule does not exist: ${ruleName}`,
 			range: {
-				start: textDocument.positionAt(-1),
-				end: textDocument.positionAt(-1)
+				start: textDocument.positionAt(left),
+				end: textDocument.positionAt(right)
 			},
 			source: 'polar'
 		};
 		diagnostics.push(diagnostic);
-	}
+	});
 	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
 }
 
-// async function validateTextDocument(textDocument: TextDocument): Promise<void> {
-// 	// In this simple example we get the settings for every validate run.
-// 	const settings = await getDocumentSettings(textDocument.uri);
-
-// 	// The validator creates diagnostics for all uppercase words length 2 and more
-// 	const text = textDocument.getText();
-// 	const pattern = /\b[A-Z]{2,}\b/g;
-// 	let m: RegExpExecArray | null;
-
-// 	let problems = 0;
-// 	const diagnostics: Diagnostic[] = [];
-// 	while ((m = pattern.exec(text)) && problems < settings.maxNumberOfProblems) {
-// 		problems++;
-// 		if (hasDiagnosticRelatedInformationCapability) {
-// 			diagnostic.relatedInformation = [
-// 				{
-// 					location: {
-// 						uri: textDocument.uri,
-// 						range: Object.assign({}, diagnostic.range)
-// 					},
-// 					message: 'Spelling matters'
-// 				},
-// 				{
-// 					location: {
-// 						uri: textDocument.uri,
-// 						range: Object.assign({}, diagnostic.range)
-// 					},
-// 					message: 'Particularly for names'
-// 				}
-// 			];
-// 		}
-// 		diagnostics.push(diagnostic);
-// 	}
-
-// 	// Send the computed diagnostics to VSCode.
-// 	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
-// }
-
-// connection.onDidChangeWatchedFiles(_change => {
-// 	// Monitored files have change in VSCode
-// 	connection.console.log('We received an file change event');
-// });
-
-connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation [] => {
-
+connection.onDocumentSymbol((params: DocumentSymbolParams): SymbolInformation[] => {
 	connection.console.log('We received a document symbol event');
 	const doc = documents.get(params.textDocument.uri);
 	console.log(`doc is ${doc}`);
-	const result: SymbolInformation [] = [];
-	
+	const result: SymbolInformation[] = [];
+
 	if (doc !== undefined) {
-		const summary: {
-						rules: {
-								symbol: string, 
-								signature: string, 
-								location: [string, number, number]
-							   }[] 
-					   } = polar.getSummary();
+		const rules: {
+			symbol: string,
+			signature: string,
+			location: [string, number, number]
+		}[]
+			= polar.getRuleInfo();
 
-		console.log('Polar summary is', summary);
+		console.log('Polar rules found are', rules);
+		rules.forEach((rule: {
+			symbol: string,
+			signature: string,
+			location: [string, number, number]
+		}) => {
 
-		summary.rules.forEach((rule: {symbol: string, 
-									  signature: string, 
-									  location: [string, number, number]}) => {
-			
 			const currentDocUri: DocumentUri = rule.location[0];
 
 			if (currentDocUri === params.textDocument.uri) {
-
 				const symbolSummary: SymbolInformation = {
 					name: rule.symbol,
 					kind: SymbolKind.Method,
 					location: {
 						uri: currentDocUri,
 						range: {
-							start: doc.positionAt(rule.location[1] + 1),
+							start: doc.positionAt(rule.location[1]),
 							end: doc.positionAt(rule.location[2])
 						}
-						//Range.create(symbolRangeStart, symbolRangeEnd)
 					}
 				};
 				result.push(symbolSummary);
 			}
-			
-		}); 
+
+		});
 	}
-   // TODO
-   console.log("The obtained symbol information is", result);
-   // result.sort((rule1, rule2) => (rule2.location.range.start.line - rule1.location.range.start.line));
-   return result;
+	// TODO
+	console.log("The obtained symbol information is", result);
+	// result.sort((rule1, rule2) => (rule2.location.range.start.line - rule1.location.range.start.line));
+	return result;
 });
 
 // This handler provides the initial list of the completion items.

@@ -94,10 +94,10 @@ pub fn parse_query(src_id: u64, src: &str) -> PolarResult<Term> {
         })
 }
 
-pub fn parse_file_with_errors(
-    src_id: u64,
-    src: &str,
-) -> PolarResult<(Vec<Line>, Vec<(String, usize, usize)>)> {
+/// A parse error that we caught and continued parsing
+pub type CapturedError = Vec<(String, usize, usize)>;
+
+pub fn parse_file_with_errors(src_id: u64, src: &str) -> PolarResult<(Vec<Line>, CapturedError)> {
     let mut errors = vec![];
     polar::LinesParser::new()
         .parse(src_id, &mut errors, Lexer::new(src))

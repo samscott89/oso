@@ -103,12 +103,13 @@ impl KnowledgeBase {
         self.loaded_files.clear();
     }
 
-    pub fn remove_file(&mut self, filename: &str) {
-        if let Some(src_id) = self.loaded_files.get(filename).cloned() {
-            self.remove_source(filename, src_id);
-        }
+    pub fn remove_file(&mut self, filename: &str) -> Option<String> {
+        self.loaded_files
+            .get(filename)
+            .cloned()
+            .map(|src_id| self.remove_source(filename, src_id))
     }
-    fn remove_source(&mut self, filename: &str, source_id: u64) {
+    fn remove_source(&mut self, filename: &str, source_id: u64) -> String {
         // remove from rules
         self.rules.retain(|_, gr| {
             let to_remove: Vec<u64> = gr.rules.iter().filter_map(|(idx, rule)| {
@@ -139,7 +140,8 @@ impl KnowledgeBase {
 
         // remove from files
         self.loaded_files.remove(filename);
-        self.loaded_content.retain(|_, f| f != &filename);
+        self.loaded_content.retain(|_, f| f != filename);
+        source.src
     }
 
     fn check_file(&self, src: &str, filename: &str) -> PolarResult<()> {
